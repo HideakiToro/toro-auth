@@ -1225,6 +1225,15 @@ dependencies = [
  "serde",
  "tokio",
  "toro-auth-core",
+ "toro-auth-mongo",
+]
+
+[[package]]
+name = "toro-auth-mongo"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "toro-auth-core",
 ]
 
 [[package]]
