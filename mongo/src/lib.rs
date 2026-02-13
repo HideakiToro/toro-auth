@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use toro_auth_core::{
     identity::{IdentityBackend, IdentityError},
@@ -19,38 +20,40 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> M
     }
 }
 
+#[async_trait]
 impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> SessionBackend<T>
     for MongoBackend<T>
 {
-    fn login(&self, _name: String, _password: String) -> Result<Session, SessionError> {
+    async fn login(&self, _name: String, _password: String) -> Result<Session, SessionError> {
         todo!()
     }
 
-    fn validate(&self, _session: Session) -> std::result::Result<T, SessionError> {
+    async fn validate(&self, _session: Session) -> std::result::Result<T, SessionError> {
         todo!()
     }
 }
 
+#[async_trait]
 impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> IdentityBackend<T>
     for MongoBackend<T>
 {
-    fn get_all(&self) -> Result<Vec<T>, IdentityError> {
+    async fn get_all(&self) -> Result<Vec<T>, IdentityError> {
         todo!()
     }
 
-    fn create(&self, _identity: T) -> Result<(), IdentityError> {
+    async fn create(&self, _identity: T) -> Result<(), IdentityError> {
         todo!()
     }
 
-    fn get_by_id(&self, _id: String) -> Result<T, IdentityError> {
+    async fn get_by_id(&self, _id: String) -> Result<T, IdentityError> {
         todo!()
     }
 
-    fn update_by_id(&self, _id: String, _identity: T) -> Result<(), IdentityError> {
+    async fn update_by_id(&self, _id: String, _identity: T) -> Result<(), IdentityError> {
         todo!()
     }
 
-    fn delete_by_id(&self, _id: String) -> Result<(), IdentityError> {
+    async fn delete_by_id(&self, _id: String) -> Result<(), IdentityError> {
         todo!()
     }
 }

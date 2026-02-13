@@ -6,6 +6,7 @@ use actix_web::{
     },
     web::{Data, Json, ServiceConfig, get, post},
 };
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::pin::Pin;
 
@@ -60,14 +61,14 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> S
             .route(&self.validate_path, get().to(validate::<T>));
     }
 
-    pub fn validate(&self, session: Session) -> Result<T, SessionError> {
+    pub async fn validate(&self, session: Session) -> Result<T, SessionError> {
         println!("Validating session {}...", session.id);
-        self.backend.validate(session)
+        self.backend.validate(session).await
     }
 
-    pub fn login(&self, username: String, password: String) -> Result<Session, SessionError> {
+    pub async fn login(&self, username: String, password: String) -> Result<Session, SessionError> {
         println!("Loggin in as {username} with password {password}...");
-        self.backend.login(username, password)
+        self.backend.login(username, password).await
     }
 }
 
@@ -75,7 +76,7 @@ async fn validate<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync
     session_provider: Data<SessionProvider<T>>,
     session: Data<Session>,
 ) -> impl Responder {
-    match session_provider.validate(session.get_ref().clone()) {
+    match session_provider.validate(session.get_ref().clone()).await {
         Ok(session) => HttpResponse::Ok().json(session),
         Err(e) => e.into(),
     }
@@ -86,7 +87,10 @@ async fn login<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 
     request: Json<LoginRequest>,
 ) -> impl Responder {
     let request = request.0;
-    let session = match session_provider.login(request.username, request.password) {
+    let session = match session_provider
+        .login(request.username, request.password)
+        .await
+    {
         Ok(session) => session,
         Err(e) => return e.into(),
     };
@@ -118,7 +122,8 @@ impl FromRequest for Session {
     }
 }
 
+#[async_trait]
 pub trait SessionBackend<T>: Send + Sync {
-    fn validate(&self, session: Session) -> Result<T, SessionError>;
-    fn login(&self, username: String, password: String) -> Result<Session, SessionError>;
+    async fn validate(&self, session: Session) -> Result<T, SessionError>;
+    async fn login(&self, username: String, password: String) -> Result<Session, SessionError>;
 }

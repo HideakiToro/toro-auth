@@ -2,6 +2,7 @@ use actix_web::{
     HttpResponse, Responder,
     web::{Data, Json, Path, ServiceConfig, delete, get, post, put},
 };
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 pub enum IdentityError {
@@ -61,36 +62,36 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> I
             );
     }
 
-    pub fn get_all(&self) -> Result<Vec<T>, IdentityError> {
+    pub async fn get_all(&self) -> Result<Vec<T>, IdentityError> {
         println!("Getting all identities...");
-        self.backend.get_all()
+        self.backend.get_all().await
     }
 
-    pub fn create(&self, identity: T) -> Result<(), IdentityError> {
+    pub async fn create(&self, identity: T) -> Result<(), IdentityError> {
         println!("Creating identity...");
-        self.backend.create(identity)
+        self.backend.create(identity).await
     }
 
-    pub fn get_by_id(&self, id: String) -> Result<T, IdentityError> {
+    pub async fn get_by_id(&self, id: String) -> Result<T, IdentityError> {
         println!("Getting identity {id}...");
-        self.backend.get_by_id(id)
+        self.backend.get_by_id(id).await
     }
 
-    pub fn update(&self, id: String, identity: T) -> Result<(), IdentityError> {
+    pub async fn update(&self, id: String, identity: T) -> Result<(), IdentityError> {
         println!("Updating identity {id}...");
-        self.backend.update_by_id(id, identity)
+        self.backend.update_by_id(id, identity).await
     }
 
-    pub fn delete(&self, id: String) -> Result<(), IdentityError> {
+    pub async fn delete(&self, id: String) -> Result<(), IdentityError> {
         println!("Deleting identity {id}...");
-        self.backend.delete_by_id(id)
+        self.backend.delete_by_id(id).await
     }
 }
 
 async fn get_all<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>(
     identity_provider: Data<IdentityProvider<T>>,
 ) -> impl Responder {
-    match identity_provider.get_all() {
+    match identity_provider.get_all().await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(e) => e.into(),
     }
@@ -100,7 +101,7 @@ async fn create<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     identity_provider: Data<IdentityProvider<T>>,
     identity: Json<T>,
 ) -> impl Responder {
-    match identity_provider.create(identity.0) {
+    match identity_provider.create(identity.0).await {
         Ok(_) => HttpResponse::Created().finish(),
         Err(e) => e.into(),
     }
@@ -110,7 +111,7 @@ async fn get_by_id<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Syn
     identity_provider: Data<IdentityProvider<T>>,
     path: Path<IdentityGetPath>,
 ) -> impl Responder {
-    match identity_provider.get_by_id(path.id.clone()) {
+    match identity_provider.get_by_id(path.id.clone()).await {
         Ok(_) => HttpResponse::Created().finish(),
         Err(e) => e.into(),
     }
@@ -121,7 +122,7 @@ async fn update_by_id<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + 
     path: Path<IdentityGetPath>,
     identity: Json<T>,
 ) -> impl Responder {
-    match identity_provider.update(path.id.clone(), identity.0) {
+    match identity_provider.update(path.id.clone(), identity.0).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => e.into(),
     }
@@ -131,19 +132,20 @@ async fn delete_by_id<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + 
     identity_provider: Data<IdentityProvider<T>>,
     path: Path<IdentityGetPath>,
 ) -> impl Responder {
-    match identity_provider.delete(path.id.clone()) {
+    match identity_provider.delete(path.id.clone()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => e.into(),
     }
 }
 
+#[async_trait]
 pub trait IdentityBackend<T>: Send + Sync
 where
     T: Serialize + for<'de> Deserialize<'de>,
 {
-    fn get_all(&self) -> Result<Vec<T>, IdentityError>;
-    fn create(&self, identity: T) -> Result<(), IdentityError>;
-    fn get_by_id(&self, id: String) -> Result<T, IdentityError>;
-    fn update_by_id(&self, id: String, identity: T) -> Result<(), IdentityError>;
-    fn delete_by_id(&self, id: String) -> Result<(), IdentityError>;
+    async fn get_all(&self) -> Result<Vec<T>, IdentityError>;
+    async fn create(&self, identity: T) -> Result<(), IdentityError>;
+    async fn get_by_id(&self, id: String) -> Result<T, IdentityError>;
+    async fn update_by_id(&self, id: String, identity: T) -> Result<(), IdentityError>;
+    async fn delete_by_id(&self, id: String) -> Result<(), IdentityError>;
 }
