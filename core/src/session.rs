@@ -10,22 +10,26 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::pin::Pin;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Session {
     pub id: String,
+    pub user_id: String,
 }
 
 pub enum SessionError {
     InvalidOrMissingSession,
     InternalServerError,
     ServiceUnavailable,
+    InvalidLogin,
 }
 
 impl From<SessionError> for HttpResponse {
     fn from(value: SessionError) -> Self {
         match value {
             SessionError::InternalServerError => HttpResponse::InternalServerError().finish(),
-            SessionError::InvalidOrMissingSession => HttpResponse::Unauthorized().finish(),
+            SessionError::InvalidOrMissingSession | SessionError::InvalidLogin => {
+                HttpResponse::Unauthorized().finish()
+            }
             SessionError::ServiceUnavailable => HttpResponse::ServiceUnavailable().finish(),
         }
     }
@@ -61,9 +65,9 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> S
             .route(&self.validate_path, get().to(validate::<T>));
     }
 
-    pub async fn validate(&self, session: Session) -> Result<T, SessionError> {
-        println!("Validating session {}...", session.id);
-        self.backend.validate(session).await
+    pub async fn validate(&self, session_id: String) -> Result<T, SessionError> {
+        println!("Validating session {session_id}...");
+        self.backend.validate(session_id).await
     }
 
     pub async fn login(&self, username: String, password: String) -> Result<Session, SessionError> {
@@ -76,7 +80,7 @@ async fn validate<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync
     session_provider: Data<SessionProvider<T>>,
     session: Data<Session>,
 ) -> impl Responder {
-    match session_provider.validate(session.get_ref().clone()).await {
+    match session_provider.validate(session.id.clone()).await {
         Ok(session) => HttpResponse::Ok().json(session),
         Err(e) => e.into(),
     }
@@ -112,11 +116,13 @@ impl FromRequest for Session {
             let Some(session_id) = req.cookie("sessionId") else {
                 return Ok(Self {
                     id: "invalid".into(),
+                    user_id: "invalid".into(),
                 });
             };
 
             Ok(Self {
                 id: session_id.value().into(),
+                user_id: "unset".into(),
             })
         })
     }
@@ -124,6 +130,6 @@ impl FromRequest for Session {
 
 #[async_trait]
 pub trait SessionBackend<T>: Send + Sync {
-    async fn validate(&self, session: Session) -> Result<T, SessionError>;
+    async fn validate(&self, session_id: String) -> Result<T, SessionError>;
     async fn login(&self, username: String, password: String) -> Result<Session, SessionError>;
 }

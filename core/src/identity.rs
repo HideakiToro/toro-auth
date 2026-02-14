@@ -144,7 +144,7 @@ where
     T: Serialize + for<'de> Deserialize<'de>,
 {
     async fn get_all(&self) -> Result<Vec<T>, IdentityError>;
-    async fn create(&self, identity: T) -> Result<(), IdentityError>;
+    async fn create(&self, mut identity: T) -> Result<(), IdentityError>;
     async fn get_by_id(&self, id: String) -> Result<T, IdentityError>;
     async fn update_by_id(&self, id: String, identity: T) -> Result<(), IdentityError>;
     async fn delete_by_id(&self, id: String) -> Result<(), IdentityError>;
