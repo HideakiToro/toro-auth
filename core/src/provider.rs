@@ -2,6 +2,7 @@ use actix_web::web::{Data, ServiceConfig};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    ObjectId,
     identity::{IdentityBackend, IdentityProvider},
     session::{SessionBackend, SessionProvider},
 };
@@ -9,7 +10,7 @@ use crate::{
 #[derive(Clone)]
 pub struct AuthProvider<T, J>
 where
-    T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
     J: SessionBackend<T> + IdentityBackend<T> + Clone + Send + Sync + 'static,
 {
     pub session_provider: Data<SessionProvider<T>>,
@@ -18,7 +19,7 @@ where
 }
 
 impl<
-    T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
     J: SessionBackend<T> + IdentityBackend<T> + Clone + Send + Sync + 'static,
 > AuthProvider<T, J>
 {
@@ -44,7 +45,7 @@ impl<
 
 pub struct AuthProviderBuilder<T, J>
 where
-    T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
     J: SessionBackend<T> + IdentityBackend<T> + Send + Sync + 'static,
 {
     session_provider: SessionProvider<T>,
@@ -53,7 +54,7 @@ where
 }
 
 impl<
-    T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
     J: SessionBackend<T> + IdentityBackend<T> + Clone + Send + Sync + 'static,
 > AuthProviderBuilder<T, J>
 {

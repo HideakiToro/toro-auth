@@ -4,15 +4,11 @@ use mongodb::{Client, Collection, Database, bson::doc};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use toro_auth_core::{
+    ObjectId,
     identity::{IdentityBackend, IdentityError},
     session::{Session, SessionBackend, SessionError},
 };
 use uuid::Uuid;
-
-pub trait ObjectId {
-    fn id(&self) -> Uuid;
-    fn set_id(&mut self, id: Uuid);
-}
 
 #[derive(Debug)]
 pub enum MongoInitError {
@@ -100,9 +96,13 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
             return Err(SessionError::InvalidLogin);
         };
 
+        let Some(user_id) = identity.id() else {
+            return Err(SessionError::InternalServerError);
+        };
+
         let session = Session {
             id: Uuid::new_v4().into(),
-            user_id: identity.id().into(),
+            user_id: user_id.into(),
         };
 
         let _ = match self.session_db.insert_one(session.clone()).await {
@@ -205,8 +205,31 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
         Ok(identity)
     }
 
-    async fn update_by_id(&self, _id: String, _identity: T) -> Result<(), IdentityError> {
-        todo!()
+    async fn update_by_id(&self, id: String, identity: T) -> Result<(), IdentityError> {
+        let res = match self
+            .identity_db
+            .replace_one(
+                doc! {
+                    "id": {
+                        "$eq": id
+                    }
+                },
+                identity,
+            )
+            .await
+        {
+            Ok(res) => res,
+            Err(e) => {
+                eprintln!("{e:#?}");
+                return Err(IdentityError::InternalServerError);
+            }
+        };
+
+        if res.matched_count <= 0 && res.modified_count <= 0 {
+            return Err(IdentityError::NotFound);
+        }
+
+        Ok(())
     }
 
     async fn delete_by_id(&self, id: String) -> Result<(), IdentityError> {

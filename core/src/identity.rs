@@ -5,6 +5,8 @@ use actix_web::{
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+use crate::ObjectId;
+
 pub enum IdentityError {
     NotFound,
     InternalServerError,
@@ -31,13 +33,15 @@ pub struct IdentityGetPath {
 #[derive(Clone)]
 pub struct IdentityProvider<T>
 where
-    T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
 {
     identity_base_path: String,
     backend: Data<Box<dyn IdentityBackend<T>>>,
 }
 
-impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> IdentityProvider<T> {
+impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>
+    IdentityProvider<T>
+{
     pub fn default_with_backend(backend: Data<Box<dyn IdentityBackend<T>>>) -> Self {
         Self {
             identity_base_path: String::from("identity"),
@@ -88,7 +92,9 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> I
     }
 }
 
-async fn get_all<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>(
+async fn get_all<
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+>(
     identity_provider: Data<IdentityProvider<T>>,
 ) -> impl Responder {
     match identity_provider.get_all().await {
@@ -97,7 +103,9 @@ async fn get_all<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync 
     }
 }
 
-async fn create<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>(
+async fn create<
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+>(
     identity_provider: Data<IdentityProvider<T>>,
     identity: Json<T>,
 ) -> impl Responder {
@@ -107,7 +115,9 @@ async fn create<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     }
 }
 
-async fn get_by_id<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>(
+async fn get_by_id<
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+>(
     identity_provider: Data<IdentityProvider<T>>,
     path: Path<IdentityGetPath>,
 ) -> impl Responder {
@@ -117,7 +127,9 @@ async fn get_by_id<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Syn
     }
 }
 
-async fn update_by_id<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>(
+async fn update_by_id<
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+>(
     identity_provider: Data<IdentityProvider<T>>,
     path: Path<IdentityGetPath>,
     identity: Json<T>,
@@ -128,7 +140,9 @@ async fn update_by_id<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + 
     }
 }
 
-async fn delete_by_id<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>(
+async fn delete_by_id<
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+>(
     identity_provider: Data<IdentityProvider<T>>,
     path: Path<IdentityGetPath>,
 ) -> impl Responder {
@@ -141,7 +155,7 @@ async fn delete_by_id<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + 
 #[async_trait]
 pub trait IdentityBackend<T>: Send + Sync
 where
-    T: Serialize + for<'de> Deserialize<'de>,
+    T: ObjectId + Serialize + for<'de> Deserialize<'de>,
 {
     async fn get_all(&self) -> Result<Vec<T>, IdentityError>;
     async fn create(&self, mut identity: T) -> Result<(), IdentityError>;

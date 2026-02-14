@@ -1,7 +1,7 @@
 use actix_web::{App, HttpServer};
 use serde::{Deserialize, Serialize};
-use toro_auth_core::provider::AuthProvider;
-use toro_auth_mongo::{MongoBackend, ObjectId};
+use toro_auth_core::{ObjectId, provider::AuthProvider};
+use toro_auth_mongo::MongoBackend;
 use uuid::Uuid;
 
 #[tokio::main]
@@ -21,15 +21,15 @@ async fn main() -> std::io::Result<()> {
 #[derive(Serialize, Deserialize, Clone)]
 struct User {
     name: String,
-    id: Uuid,
+    id: Option<Uuid>,
 }
 
 impl ObjectId for User {
-    fn id(&self) -> Uuid {
+    fn id(&self) -> Option<Uuid> {
         self.id
     }
 
     fn set_id(&mut self, id: Uuid) {
-        self.id = id;
+        self.id = Some(id);
     }
 }

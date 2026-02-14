@@ -10,6 +10,8 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::pin::Pin;
 
+use crate::ObjectId;
+
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Session {
     pub id: String,
@@ -44,14 +46,16 @@ pub struct LoginRequest {
 #[derive(Clone)]
 pub struct SessionProvider<T>
 where
-    T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
 {
     login_path: String,
     validate_path: String,
     backend: Data<Box<dyn SessionBackend<T>>>,
 }
 
-impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> SessionProvider<T> {
+impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>
+    SessionProvider<T>
+{
     pub fn default_with_backend(backend: Data<Box<dyn SessionBackend<T>>>) -> Self {
         Self {
             login_path: String::from("session/login"),
@@ -76,7 +80,9 @@ impl<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static> S
     }
 }
 
-async fn validate<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>(
+async fn validate<
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+>(
     session_provider: Data<SessionProvider<T>>,
     session: Data<Session>,
 ) -> impl Responder {
@@ -86,7 +92,9 @@ async fn validate<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync
     }
 }
 
-async fn login<T: Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>(
+async fn login<
+    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+>(
     session_provider: Data<SessionProvider<T>>,
     request: Json<LoginRequest>,
 ) -> impl Responder {
@@ -129,7 +137,7 @@ impl FromRequest for Session {
 }
 
 #[async_trait]
-pub trait SessionBackend<T>: Send + Sync {
+pub trait SessionBackend<T: ObjectId + Serialize + for<'de> Deserialize<'de>>: Send + Sync {
     async fn validate(&self, session_id: String) -> Result<T, SessionError>;
     async fn login(&self, username: String, password: String) -> Result<Session, SessionError>;
 }
