@@ -2,7 +2,7 @@
 An actix-web extension adding basic authentication services.
 
 # IMPORTANT
-There is no form of incryption. If you want this to be secure, please start a pull request.
+There is no form of encryption. If you want this to be secure, please start a pull request.
 
 ## Includes
 1. Core - This crate is the glue of the project and the one that actually registers the routes.
