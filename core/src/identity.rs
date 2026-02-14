@@ -16,6 +16,7 @@ pub enum IdentityError {
     ServiceUnavailable,
     Unauthorized,
     InvalidId,
+    UsernameAlreadyInUse,
 }
 
 impl From<IdentityError> for HttpResponse {
@@ -26,6 +27,7 @@ impl From<IdentityError> for HttpResponse {
             IdentityError::ServiceUnavailable => HttpResponse::ServiceUnavailable().finish(),
             IdentityError::Unauthorized => HttpResponse::Unauthorized().finish(),
             IdentityError::InvalidId => HttpResponse::BadRequest().finish(),
+            IdentityError::UsernameAlreadyInUse => HttpResponse::Conflict().finish(),
         }
     }
 }

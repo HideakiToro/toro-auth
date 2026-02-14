@@ -40,6 +40,10 @@ impl ObjectId for DBUser {
     fn set_id(&mut self, id: Uuid) {
         self.id = Some(id.into());
     }
+
+    fn username(&self) -> String {
+        self.username.clone()
+    }
 }
 
 impl IntoPublic for DBUser {

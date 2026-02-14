@@ -168,6 +168,22 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     }
 
     async fn create(&self, mut identity: T) -> Result<(), IdentityError> {
+        let res = self
+            .identity_db
+            .find_one(doc! {
+                "username": {
+                    "$eq": identity.username()
+                }
+            })
+            .await
+            .map_err(|e| {
+                eprintln!("{e:#?}");
+                IdentityError::InternalServerError
+            })?;
+        if res.is_some() {
+            return Err(IdentityError::UsernameAlreadyInUse);
+        }
+
         identity.set_id(Uuid::new_v4());
 
         self.identity_db

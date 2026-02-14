@@ -8,6 +8,7 @@ use uuid::Uuid;
 pub trait ObjectId {
     fn id(&self) -> Option<Uuid>;
     fn set_id(&mut self, id: Uuid);
+    fn username(&self) -> String;
 }
 
 pub trait IntoPublic {
