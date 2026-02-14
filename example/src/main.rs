@@ -19,7 +19,7 @@ async fn main() -> std::io::Result<()> {
         .await
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Clone)]
 struct User {
     username: String,
     id: Option<String>,

@@ -1,6 +1,6 @@
 [package]
 name = "toro-auth-mongo"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2024"
 license = "MIT"
 description = "This crate provides a mongodb backend implementation for the toro-auth-core crate. Note that this crate has been implemented without any security meassures in mind."
@@ -13,5 +13,5 @@ async-trait = { version = "0.1.89" }
 futures = { version = "0.3.31" }
 mongodb = { version = "3.5.1" }
 serde = { version = "1.0.228", features = ["derive"] }
-toro-auth-core = { version = "1.0.2" }
+toro-auth-core = { version = "1.0.3" }
 uuid = { version = "1.20.0", features = ["v4"] }

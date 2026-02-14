@@ -88,6 +88,11 @@ impl<
     }
 
     pub async fn create(&self, identity: T) -> Result<(), IdentityError> {
+        let by_username = self.backend.get_by_username(identity.username()).await?;
+        if by_username.is_some() {
+            return Err(IdentityError::UsernameAlreadyInUse);
+        }
+
         self.backend.create(identity).await
     }
 
@@ -187,6 +192,7 @@ where
     async fn get_all(&self) -> Result<Vec<T>, IdentityError>;
     async fn create(&self, mut identity: T) -> Result<(), IdentityError>;
     async fn get_by_id(&self, id: String) -> Result<T, IdentityError>;
+    async fn get_by_username(&self, username: String) -> Result<Option<T>, IdentityError>;
     async fn update_by_id(&self, id: String, identity: T) -> Result<(), IdentityError>;
     async fn delete_by_id(&self, id: String) -> Result<(), IdentityError>;
 }

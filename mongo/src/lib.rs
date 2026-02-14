@@ -168,22 +168,6 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     }
 
     async fn create(&self, mut identity: T) -> Result<(), IdentityError> {
-        let res = self
-            .identity_db
-            .find_one(doc! {
-                "username": {
-                    "$eq": identity.username()
-                }
-            })
-            .await
-            .map_err(|e| {
-                eprintln!("{e:#?}");
-                IdentityError::InternalServerError
-            })?;
-        if res.is_some() {
-            return Err(IdentityError::UsernameAlreadyInUse);
-        }
-
         identity.set_id(Uuid::new_v4());
 
         self.identity_db
@@ -195,6 +179,20 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
             })?;
 
         Ok(())
+    }
+
+    async fn get_by_username(&self, username: String) -> Result<Option<T>, IdentityError> {
+        self.identity_db
+            .find_one(doc! {
+                "username": {
+                    "$eq": username
+                }
+            })
+            .await
+            .map_err(|e| {
+                eprintln!("{e:#?}");
+                IdentityError::InternalServerError
+            })
     }
 
     async fn get_by_id(&self, id: String) -> Result<T, IdentityError> {

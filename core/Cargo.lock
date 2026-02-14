@@ -1231,7 +1231,7 @@ dependencies = [
 
 [[package]]
 name = "toro-auth-core"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actix-web",
  "async-trait",
