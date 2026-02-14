@@ -2027,7 +2027,9 @@ dependencies = [
 
 [[package]]
 name = "toro-auth-core"
-version = "0.1.0"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e06fbc34bb210fe33e17408f5cd3fbf164ba8cf04c384dccfdf79a29fe1334c2"
 dependencies = [
  "actix-web",
  "async-trait",
@@ -2038,7 +2040,7 @@ dependencies = [
 
 [[package]]
 name = "toro-auth-mongo"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-trait",
  "futures",

@@ -1,7 +1,6 @@
-use std::str::FromStr;
-
 use actix_web::{App, HttpServer};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use toro_auth_core::{IntoPublic, ObjectId, provider::AuthProvider};
 use toro_auth_mongo::MongoBackend;
 use uuid::Uuid;
