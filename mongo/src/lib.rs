@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use futures::TryStreamExt;
 use mongodb::{Client, Collection, Database, bson::doc};
 use serde::{Deserialize, Serialize};
-use std::marker::PhantomData;
+use std::{marker::PhantomData, str::FromStr};
 use toro_auth_core::{
     ObjectId,
     identity::{IdentityBackend, IdentityError},
@@ -21,7 +21,7 @@ pub struct MongoBackend<
 > {
     _mapper: PhantomData<T>,
     identity_db: Collection<T>,
-    session_db: Collection<Session>,
+    session_db: Collection<Session<T>>,
 }
 
 impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>
@@ -36,9 +36,10 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     }
 
     pub async fn from_url(url: String, db_name: String) -> Result<Self, MongoInitError> {
-        let client = Client::with_uri_str(url)
-            .await
-            .map_err(|_| MongoInitError::FailedToConnect)?;
+        let client = Client::with_uri_str(url).await.map_err(|e| {
+            eprintln!("{e:#?}");
+            MongoInitError::FailedToConnect
+        })?;
         let db = client.database(&db_name);
         Ok(Self::new(db))
     }
@@ -77,11 +78,11 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
 impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>
     SessionBackend<T> for MongoBackend<T>
 {
-    async fn login(&self, username: String, password: String) -> Result<Session, SessionError> {
+    async fn login(&self, username: String, password: String) -> Result<Session<T>, SessionError> {
         let res = match self
             .identity_db
             .find_one(doc! {
-                "name": username,
+                "username": username,
                 "password": password
             })
             .await
@@ -100,10 +101,7 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
             return Err(SessionError::InternalServerError);
         };
 
-        let session = Session {
-            id: Uuid::new_v4().into(),
-            user_id: user_id.into(),
-        };
+        let session = Session::new(Uuid::new_v4().into(), user_id.into());
 
         let _ = match self.session_db.insert_one(session.clone()).await {
             Ok(res) => res,
@@ -136,10 +134,10 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
             return Err(SessionError::InvalidOrMissingSession);
         };
 
-        let identity = self
-            .get_by_id(session.user_id)
-            .await
-            .map_err(|_| SessionError::InternalServerError)?;
+        let identity = self.get_by_id(session.user_id).await.map_err(|_| {
+            eprintln!("Couldn't find related user");
+            SessionError::InternalServerError
+        })?;
 
         Ok(identity)
     }
@@ -206,6 +204,8 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     }
 
     async fn update_by_id(&self, id: String, identity: T) -> Result<(), IdentityError> {
+        let mut identity = identity;
+        identity.set_id(Uuid::from_str(&id).map_err(|_| IdentityError::InvalidId)?);
         let res = match self
             .identity_db
             .replace_one(

@@ -9,4 +9,4 @@ serde = { version = "1.0.228" }
 tokio = { version = "1.49.0", features = ["full"] }
 toro-auth-core = { path = "../core" }
 toro-auth-mongo = { path = "../mongo" }
-uuid = { version = "1.20.0", features = ["v4"] }
+uuid = { version = "1.20.0", features = ["serde", "v4"] }

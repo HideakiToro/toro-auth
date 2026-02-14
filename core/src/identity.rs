@@ -12,6 +12,7 @@ pub enum IdentityError {
     InternalServerError,
     ServiceUnavailable,
     Unauthorized,
+    InvalidId,
 }
 
 impl From<IdentityError> for HttpResponse {
@@ -21,6 +22,7 @@ impl From<IdentityError> for HttpResponse {
             IdentityError::NotFound => HttpResponse::NotFound().finish(),
             IdentityError::ServiceUnavailable => HttpResponse::ServiceUnavailable().finish(),
             IdentityError::Unauthorized => HttpResponse::Unauthorized().finish(),
+            IdentityError::InvalidId => HttpResponse::BadRequest().finish(),
         }
     }
 }
@@ -50,18 +52,20 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     }
 
     pub fn configure(&self, cfg: &mut ServiceConfig) {
-        cfg.route(&self.identity_base_path, get().to(get_all::<T>))
-            .route(&self.identity_base_path, post().to(create::<T>))
+        let data = Data::new(self.clone());
+        cfg.app_data(data.clone())
+            .route(&data.identity_base_path, get().to(get_all::<T>))
+            .route(&data.identity_base_path, post().to(create::<T>))
             .route(
-                &format!("{}/{{id}}", self.identity_base_path),
+                &format!("{}/{{id}}", data.identity_base_path),
                 get().to(get_by_id::<T>),
             )
             .route(
-                &format!("{}/{{id}}", self.identity_base_path),
+                &format!("{}/{{id}}", data.identity_base_path),
                 put().to(update_by_id::<T>),
             )
             .route(
-                &format!("{}/{{id}}", self.identity_base_path),
+                &format!("{}/{{id}}", data.identity_base_path),
                 delete().to(delete_by_id::<T>),
             );
     }
@@ -122,7 +126,7 @@ async fn get_by_id<
     path: Path<IdentityGetPath>,
 ) -> impl Responder {
     match identity_provider.get_by_id(path.id.clone()).await {
-        Ok(_) => HttpResponse::Created().finish(),
+        Ok(res) => HttpResponse::Ok().json(res),
         Err(e) => e.into(),
     }
 }

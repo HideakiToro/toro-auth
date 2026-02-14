@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use actix_web::{App, HttpServer};
 use serde::{Deserialize, Serialize};
 use toro_auth_core::{ObjectId, provider::AuthProvider};
@@ -7,7 +9,7 @@ use uuid::Uuid;
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let identity = AuthProvider::default_with_backend(
-        MongoBackend::<User>::from_url("mongo://localhost:27127".into(), "example".into())
+        MongoBackend::<User>::from_url("mongodb://localhost:27017".into(), "example".into())
             .await
             .unwrap(),
     );
@@ -20,16 +22,17 @@ async fn main() -> std::io::Result<()> {
 
 #[derive(Serialize, Deserialize, Clone)]
 struct User {
-    name: String,
-    id: Option<Uuid>,
+    username: String,
+    password: String,
+    id: Option<String>,
 }
 
 impl ObjectId for User {
     fn id(&self) -> Option<Uuid> {
-        self.id
+        Uuid::from_str(&self.id.clone()?).ok()
     }
 
     fn set_id(&mut self, id: Uuid) {
-        self.id = Some(id);
+        self.id = Some(id.into());
     }
 }

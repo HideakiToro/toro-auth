@@ -1,0 +1,39 @@
+### Get all
+GET http://localhost:8080/identity
+
+### Create user
+POST http://localhost:8080/identity
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "admin"
+}
+
+### Login (Create session)
+POST http://localhost:8080/session/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "admin"
+}
+
+### Validate session
+GET http://localhost:8080/session/validate
+Cookie: sessionId=c8868bc6-88e9-4e4a-b820-a52976c22a78
+
+### Get User
+GET http://localhost:8080/identity/5114df74-2789-479e-859d-5c6f3ece30b1
+
+### Change User
+PUT http://localhost:8080/identity/5114df74-2789-479e-859d-5c6f3ece30b1
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "admin"
+}
+
+### Delete User
+DELETE  http://localhost:8080/identity/5114df74-2789-479e-859d-5c6f3ece30b1
