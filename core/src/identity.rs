@@ -1,11 +1,14 @@
+use std::str::FromStr;
+
 use actix_web::{
     HttpResponse, Responder,
     web::{Data, Json, Path, ServiceConfig, delete, get, post, put},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::ObjectId;
+use crate::{IntoPublic, ObjectId, session::SessionRes};
 
 pub enum IdentityError {
     NotFound,
@@ -35,14 +38,22 @@ pub struct IdentityGetPath {
 #[derive(Clone)]
 pub struct IdentityProvider<T>
 where
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic
+        + ObjectId
+        + Serialize
+        + for<'de> Deserialize<'de>
+        + Clone
+        + Send
+        + Sync
+        + 'static,
 {
     identity_base_path: String,
     backend: Data<Box<dyn IdentityBackend<T>>>,
 }
 
-impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>
-    IdentityProvider<T>
+impl<
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+> IdentityProvider<T>
 {
     pub fn default_with_backend(backend: Data<Box<dyn IdentityBackend<T>>>) -> Self {
         Self {
@@ -71,44 +82,44 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     }
 
     pub async fn get_all(&self) -> Result<Vec<T>, IdentityError> {
-        println!("Getting all identities...");
         self.backend.get_all().await
     }
 
     pub async fn create(&self, identity: T) -> Result<(), IdentityError> {
-        println!("Creating identity...");
         self.backend.create(identity).await
     }
 
     pub async fn get_by_id(&self, id: String) -> Result<T, IdentityError> {
-        println!("Getting identity {id}...");
         self.backend.get_by_id(id).await
     }
 
     pub async fn update(&self, id: String, identity: T) -> Result<(), IdentityError> {
-        println!("Updating identity {id}...");
         self.backend.update_by_id(id, identity).await
     }
 
     pub async fn delete(&self, id: String) -> Result<(), IdentityError> {
-        println!("Deleting identity {id}...");
         self.backend.delete_by_id(id).await
     }
 }
 
 async fn get_all<
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
 >(
     identity_provider: Data<IdentityProvider<T>>,
 ) -> impl Responder {
     match identity_provider.get_all().await {
-        Ok(result) => HttpResponse::Ok().json(result),
+        Ok(result) => HttpResponse::Ok().json(
+            result
+                .into_iter()
+                .map(|res| res.into_public())
+                .collect::<Vec<T::Public>>(),
+        ),
         Err(e) => e.into(),
     }
 }
 
 async fn create<
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
 >(
     identity_provider: Data<IdentityProvider<T>>,
     identity: Json<T>,
@@ -120,24 +131,29 @@ async fn create<
 }
 
 async fn get_by_id<
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
 >(
     identity_provider: Data<IdentityProvider<T>>,
     path: Path<IdentityGetPath>,
 ) -> impl Responder {
     match identity_provider.get_by_id(path.id.clone()).await {
-        Ok(res) => HttpResponse::Ok().json(res),
+        Ok(res) => HttpResponse::Ok().json(res.into_public()),
         Err(e) => e.into(),
     }
 }
 
 async fn update_by_id<
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
 >(
     identity_provider: Data<IdentityProvider<T>>,
     path: Path<IdentityGetPath>,
     identity: Json<T>,
+    session: SessionRes<T>,
 ) -> impl Responder {
+    if session.inner.id() != Uuid::from_str(&path.id).ok() {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     match identity_provider.update(path.id.clone(), identity.0).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => e.into(),
@@ -145,11 +161,16 @@ async fn update_by_id<
 }
 
 async fn delete_by_id<
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
 >(
     identity_provider: Data<IdentityProvider<T>>,
     path: Path<IdentityGetPath>,
+    session: SessionRes<T>,
 ) -> impl Responder {
+    if session.inner.id() != Uuid::from_str(&path.id).ok() {
+        return HttpResponse::Unauthorized().finish();
+    }
+
     match identity_provider.delete(path.id.clone()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => e.into(),

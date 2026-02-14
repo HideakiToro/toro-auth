@@ -2,15 +2,22 @@ use actix_web::web::{Data, ServiceConfig};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ObjectId,
+    IntoPublic, ObjectId,
     identity::{IdentityBackend, IdentityProvider},
-    session::{SessionBackend, SessionProvider},
+    session::{SessionBackend, SessionError, SessionProvider},
 };
 
 #[derive(Clone)]
 pub struct AuthProvider<T, J>
 where
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic
+        + ObjectId
+        + Serialize
+        + for<'de> Deserialize<'de>
+        + Clone
+        + Send
+        + Sync
+        + 'static,
     J: SessionBackend<T> + IdentityBackend<T> + Clone + Send + Sync + 'static,
 {
     pub session_provider: Data<SessionProvider<T>>,
@@ -19,7 +26,7 @@ where
 }
 
 impl<
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
     J: SessionBackend<T> + IdentityBackend<T> + Clone + Send + Sync + 'static,
 > AuthProvider<T, J>
 {
@@ -38,14 +45,21 @@ impl<
             .configure(|cfg| data.clone().session_provider.configure(cfg));
     }
 
-    pub fn validate_session(&self) {
-        println!("Validating Session...");
+    pub async fn validate_session(&self, session_id: String) -> Result<T, SessionError> {
+        self.session_provider.validate(session_id).await
     }
 }
 
 pub struct AuthProviderBuilder<T, J>
 where
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic
+        + ObjectId
+        + Serialize
+        + for<'de> Deserialize<'de>
+        + Clone
+        + Send
+        + Sync
+        + 'static,
     J: SessionBackend<T> + IdentityBackend<T> + Send + Sync + 'static,
 {
     session_provider: SessionProvider<T>,
@@ -54,7 +68,7 @@ where
 }
 
 impl<
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
     J: SessionBackend<T> + IdentityBackend<T> + Clone + Send + Sync + 'static,
 > AuthProviderBuilder<T, J>
 {

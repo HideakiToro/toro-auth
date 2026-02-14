@@ -21,13 +21,13 @@ Content-Type: application/json
 
 ### Validate session
 GET http://localhost:8080/session/validate
-Cookie: sessionId=c8868bc6-88e9-4e4a-b820-a52976c22a78
+Cookie: sessionId=521513cb-3e07-4aaa-a69e-f416c00a50df
 
 ### Get User
-GET http://localhost:8080/identity/5114df74-2789-479e-859d-5c6f3ece30b1
+GET http://localhost:8080/identity/152e7883-4a5a-4be6-8602-a685f04fafa3
 
 ### Change User
-PUT http://localhost:8080/identity/5114df74-2789-479e-859d-5c6f3ece30b1
+PUT http://localhost:8080/identity/152e7883-4a5a-4be6-8602-a685f04fafa3
 Content-Type: application/json
 
 {
@@ -36,4 +36,4 @@ Content-Type: application/json
 }
 
 ### Delete User
-DELETE  http://localhost:8080/identity/5114df74-2789-479e-859d-5c6f3ece30b1
+DELETE  http://localhost:8080/identity/152e7883-4a5a-4be6-8602-a685f04fafa3

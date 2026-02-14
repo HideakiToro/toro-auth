@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::{marker::PhantomData, pin::Pin};
 
-use crate::ObjectId;
+use crate::{IntoPublic, ObjectId};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Session<T> {
@@ -80,21 +80,29 @@ pub struct LoginRequest {
 }
 
 pub struct SessionRes<T> {
-    inner: T,
+    pub inner: T,
 }
 
 #[derive(Clone)]
 pub struct SessionProvider<T>
 where
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic
+        + ObjectId
+        + Serialize
+        + for<'de> Deserialize<'de>
+        + Clone
+        + Send
+        + Sync
+        + 'static,
 {
     login_path: String,
     validate_path: String,
     backend: Data<Box<dyn SessionBackend<T>>>,
 }
 
-impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>
-    SessionProvider<T>
+impl<
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+> SessionProvider<T>
 {
     pub fn default_with_backend(backend: Data<Box<dyn SessionBackend<T>>>) -> Self {
         Self {
@@ -112,7 +120,6 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     }
 
     pub async fn validate(&self, session_id: String) -> Result<T, SessionError> {
-        println!("Validating session {session_id}...");
         self.backend.validate(session_id).await
     }
 
@@ -121,21 +128,20 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
         username: String,
         password: String,
     ) -> Result<Session<T>, SessionError> {
-        println!("Loggin in as {username} with password {password}...");
         self.backend.login(username, password).await
     }
 }
 
 async fn validate<
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
 >(
     session: SessionRes<T>,
 ) -> impl Responder {
-    HttpResponse::Ok().json(session.inner.clone())
+    HttpResponse::Ok().json(session.inner.clone().into_public())
 }
 
 async fn login<
-    T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
 >(
     session_provider: Data<SessionProvider<T>>,
     request: Json<LoginRequest>,
@@ -152,8 +158,9 @@ async fn login<
     Ok(HttpResponse::Ok().cookie(session_cookie).finish())
 }
 
-impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static>
-    FromRequest for SessionRes<T>
+impl<
+    T: IntoPublic + ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync + 'static,
+> FromRequest for SessionRes<T>
 {
     type Error = SessionError;
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
