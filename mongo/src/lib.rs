@@ -136,7 +136,7 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
 
         let identity = self.get_by_id(session.user_id).await.map_err(|_| {
             eprintln!("Couldn't find related user");
-            SessionError::InternalServerError
+            SessionError::UserNotFound
         })?;
 
         Ok(identity)

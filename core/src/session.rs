@@ -37,6 +37,7 @@ pub enum SessionError {
     InternalServerError,
     ServiceUnavailable,
     InvalidLogin,
+    UserNotFound
 }
 
 impl std::fmt::Display for SessionError {
@@ -49,7 +50,7 @@ impl From<SessionError> for HttpResponse {
     fn from(value: SessionError) -> Self {
         match value {
             SessionError::InternalServerError => HttpResponse::InternalServerError().finish(),
-            SessionError::InvalidOrMissingSession | SessionError::InvalidLogin => {
+            SessionError::InvalidOrMissingSession | SessionError::InvalidLogin | SessionError::UserNotFound => {
                 HttpResponse::Unauthorized().finish()
             }
             SessionError::ServiceUnavailable => HttpResponse::ServiceUnavailable().finish(),
@@ -61,7 +62,7 @@ impl actix_web::error::ResponseError for SessionError {
     fn status_code(&self) -> StatusCode {
         match self {
             SessionError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
-            SessionError::InvalidOrMissingSession | SessionError::InvalidLogin => {
+            SessionError::InvalidOrMissingSession | SessionError::InvalidLogin | SessionError::UserNotFound => {
                 StatusCode::UNAUTHORIZED
             }
             SessionError::ServiceUnavailable => StatusCode::SERVICE_UNAVAILABLE,
