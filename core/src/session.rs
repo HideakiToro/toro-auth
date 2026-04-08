@@ -95,8 +95,8 @@ where
         + Sync
         + 'static,
 {
-    login_path: String,
-    validate_path: String,
+    pub login_path: String,
+    pub validate_path: String,
     backend: Data<Box<dyn SessionBackend<T>>>,
 }
 

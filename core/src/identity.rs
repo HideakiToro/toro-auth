@@ -49,7 +49,7 @@ where
         + Sync
         + 'static,
 {
-    identity_base_path: String,
+    pub identity_base_path: String,
     backend: Data<Box<dyn IdentityBackend<T>>>,
 }
 
