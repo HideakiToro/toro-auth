@@ -1,4 +1,7 @@
-use actix_web::{Scope, web::{Data, ServiceConfig}};
+use actix_web::{
+    Scope,
+    web::{Data, ServiceConfig},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -39,16 +42,37 @@ impl<
         AuthProviderBuilder::default_with_backend(backend).build()
     }
 
-    pub fn configure(self, cfg: &mut ServiceConfig) {
-        let scope = Scope::new(&self.path_prefix.clone().unwrap_or("".into()));
+    /// Use this if you want to extend an existing scope with identity and session apis. Use configure if they should have their own path prefix.
+    /// Example:
+    ///     Given: scope set to '/api'
+    ///     Then adds: '/api/identity/...' and '/api/session/...' apis
+    pub fn configure_with_scope(self, scope: Scope) -> Scope {
+        let data = Data::new(self.clone());
+        let scope = scope.app_data(data);
 
+        let scope = scope.configure(|cfg| self.configure_services(cfg));
+
+        scope
+    }
+
+    fn configure_services(self, cfg: &mut ServiceConfig) {
         let data = Data::new(self);
 
-        let scope = scope.configure(|cfg| data.clone().identity_provider.configure(cfg))
+        cfg.configure(|cfg| data.clone().identity_provider.configure(cfg))
             .configure(|cfg| data.clone().session_provider.configure(cfg));
+    }
 
-        cfg.app_data(data.clone())
-            .service(scope);
+    /// Use this if identity and session apis should have their own path prefix. Use configure_with_scope if you want to extend an existing scope.
+    /// Example:
+    ///     Given: cfg set to '/' and path_prefix = "test"
+    ///     Then adds: '/test/identity/...' and '/test/session/...' apis
+    pub fn configure(self, cfg: &mut ServiceConfig) {
+        let data = Data::new(self.clone());
+
+        let scope = Scope::new(&self.path_prefix.clone().unwrap_or("".into()))
+            .configure(|cfg| self.configure_services(cfg));
+
+        cfg.app_data(data.clone()).service(scope);
     }
 
     pub async fn validate_session(&self, session_id: String) -> Result<T, SessionError> {
@@ -88,7 +112,7 @@ impl<
                 backend.clone(),
             ))),
             backend,
-            path_prefix: None
+            path_prefix: None,
         }
     }
 
@@ -129,7 +153,7 @@ impl<
             _backend: Data::new(self.backend),
             session_provider: Data::new(self.session_provider),
             identity_provider: Data::new(self.identity_provider),
-            path_prefix: self.path_prefix
+            path_prefix: self.path_prefix,
         }
     }
 }
