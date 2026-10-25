@@ -1,6 +1,6 @@
 [package]
 name = "toro-auth-mongo"
-version = "1.0.4"
+version = "1.0.5"
 edition = "2024"
 license = "MIT"
 description = "This crate provides a mongodb backend implementation for the toro-auth-core crate. Note that this crate has been implemented without any security meassures in mind."
