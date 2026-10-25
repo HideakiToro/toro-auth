@@ -48,7 +48,7 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
         let mut res = match self
             .identity_db
             .find(doc! {
-                "name": {
+                "username": {
                     "$regex": username,
                     "$options": "i"
                 }

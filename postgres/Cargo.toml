@@ -1,0 +1,16 @@
+[package]
+name = "toro-auth-postgres"
+version = "1.0.4"
+edition = "2024"
+license = "MIT"
+description = "This crate provides a postgres backend implementation for the toro-auth-core crate. Note that this crate has been implemented without any security meassures in mind."
+repository = "https://github.com/HideakiToro/toro-auth/postgres"
+homepage = "https://github.com/HideakiToro"
+
+[dependencies]
+async-trait = { version = "0.1.89" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.154" }
+sqlx = { version = "0.9.0", features = ["migrate", "postgres", "runtime-tokio", "uuid", "json"]}
+toro-auth-core = { version = "^1.0" }
+uuid = { version = "1.23.0", features = ["v4"] }

@@ -3,17 +3,25 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use toro_auth_core::{IntoPublic, ObjectId, provider::AuthProvider};
 use toro_auth_mongo::MongoBackend;
+use toro_auth_postgres::PostgresBackend;
 use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let identity = AuthProvider::default_with_backend(
+    let _mongo_identity = AuthProvider::default_with_backend(
         MongoBackend::<DBUser>::from_url("mongodb://localhost:27017".into(), "example".into())
             .await
             .unwrap(),
     );
 
-    HttpServer::new(move || App::new().configure(|cfg| identity.clone().configure(cfg)))
+    let postgres_backend =
+        PostgresBackend::<DBUser>::from_url("postgres://postgres:admin@localhost:5432".into())
+            .await
+            .unwrap();
+    postgres_backend.create_tables().await.unwrap();
+    let postgres_identity = AuthProvider::default_with_backend(postgres_backend);
+
+    HttpServer::new(move || App::new().configure(|cfg| postgres_identity.clone().configure(cfg)))
         .bind(("127.0.0.1", 8080))?
         .run()
         .await
