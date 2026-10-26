@@ -89,11 +89,15 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
     SessionBackend<T> for PostgresBackend<T>
 {
     async fn login(&self, username: String, password: String) -> Result<Session<T>, SessionError> {
-        let res: T = match query_as::<Postgres, IdentityRow>("SELECT * FROM toroauth.identity WHERE data->>'username' = $1 AND data->>'password' = $2 LIMIT 1").bind(username).bind(password).fetch_one(&self.pool).await {
-            Ok(res) => serde_json::from_value(res.data).map_err(|err| {
+        let res: T = match query_as::<Postgres, IdentityRow>("SELECT * FROM toroauth.identity WHERE data->>'username' = $1 AND data->>'password' = $2 LIMIT 1").bind(username).bind(password).fetch_optional(&self.pool).await {
+            Ok(Some(res)) => serde_json::from_value(res.data).map_err(|err| {
                 eprintln!("Failed to deserialize identity on login: {err:#?}");
                 SessionError::InternalServerError
             })?,
+            Ok(None) => {
+                eprintln!("Username-Password-Combination do not match any known identity");
+                return Err(SessionError::UserNotFound);
+            }
             Err(e) => {
                 eprintln!("Failed to query for identity on login: {e}");
                 return Err(SessionError::InternalServerError);
@@ -125,16 +129,22 @@ impl<T: ObjectId + Serialize + for<'de> Deserialize<'de> + Clone + Send + Sync +
             eprintln!("Failed to parse session-id into uuid: {err:#?}");
             SessionError::InvalidOrMissingSession
         })?;
-        let res: SessionRow = query_as("SELECT * FROM toroauth.session WHERE id = $1 LIMIT 1")
-            .bind(session_id)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|err| {
-                eprintln!("Failed to query for session: {err:#?}");
-                SessionError::InternalServerError
-            })?;
+        let res: Option<SessionRow> =
+            query_as("SELECT * FROM toroauth.session WHERE id = $1 LIMIT 1")
+                .bind(session_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|err| {
+                    eprintln!("Failed to query for session: {err:#?}");
+                    SessionError::InternalServerError
+                })?;
 
-        let identity = self.get_by_id(res.user_id.into()).await.map_err(|_| {
+        let Some(row) = res else {
+            eprintln!("Session-Id does not match any known Session");
+            return Err(SessionError::InvalidOrMissingSession);
+        };
+
+        let identity = self.get_by_id(row.user_id.into()).await.map_err(|_| {
             eprintln!("Couldn't find user related to session");
             SessionError::UserNotFound
         })?;

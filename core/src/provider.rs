@@ -43,16 +43,33 @@ impl<
     }
 
     /// Use this if you want to extend an existing scope with identity and session apis. Use configure if they should have their own path prefix.
+    ///
     /// Example:
-    ///     Given: scope set to '/api'
-    ///     Then adds: '/api/identity/...' and '/api/session/...' apis
-    pub fn configure_with_scope(self, scope: Scope) -> Scope {
+    ///
+    ///     Given:
+    ///         api_scope set to '/api'
+    ///         data_scope set to '/'
+    ///     Then:
+    ///         adds '/api/identity/...' and '/api/session/...' apis
+    ///         makes AuthProvider available to all routes under '/'
+    pub fn configure_with_scope(
+        self,
+        api_scope: Scope,
+        data_scope: Option<Scope>,
+    ) -> (Scope, Option<Scope>) {
         let data = Data::new(self.clone());
-        let scope = scope.app_data(data);
-
-        let scope = scope.configure(|cfg| self.configure_services(cfg));
-
-        scope
+        match data_scope {
+            Some(data_scope) => {
+                let data_scope = data_scope.app_data(data);
+                let api_scope = api_scope.configure(|cfg| self.configure_services(cfg));
+                (api_scope, Some(data_scope))
+            }
+            None => {
+                let scope = api_scope.app_data(data);
+                let scope = scope.configure(|cfg| self.configure_services(cfg));
+                (scope, None)
+            }
+        }
     }
 
     fn configure_services(self, cfg: &mut ServiceConfig) {
